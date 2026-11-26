@@ -67,16 +67,68 @@ screening rule. The API returns null for averages and rates with no qualifying
 records. The preview uses `v_contracts_for_reporting` and matches literal
 substrings of contract IDs and project descriptions.
 
-## Prepare a public deployment
+## Deploy on Render
 
-Recommended for a capstone demo is one small Linux VM with Docker and a TLS
-reverse proxy. The supplied SQLite file is approximately 288 MiB. Store it
-outside the image and repository on persistent disk with read access for
-container UID 10001. Plan room for the snapshot, updates, and image storage.
-A managed Docker web service with a persistent disk is another option. Check
-the host's current compute and disk prices, storage limits, and free-tier
-restrictions before selecting it. Ephemeral storage and static-only hosting
-cannot supply the persistent SQLite file and FastAPI runtime.
+The repository's `render.yaml` describes one Docker web service in Singapore,
+with a Starter instance and a 1 GB persistent disk mounted at `/var/data`.
+At the published rates checked on November 27, 2026, this is about **US$7.25 per
+month** before tax or usage charges ($7 compute plus $0.25 disk). Confirm prices
+in the dashboard before creating the service. Render's Free web service has
+ephemeral storage, no persistent disk or SSH, and spins down after 15 minutes
+idle. It is unsuitable for this persistent SQLite setup. A disk-backed
+service also uses a single instance. See
+[Render pricing](https://render.com/pricing) and
+[Persistent Disks](https://render.com/docs/disks).
+
+1. Sign in at [Render](https://dashboard.render.com/) and authorize access to
+   `paolomrtnz/BuildSightPH`. Choose **New → Blueprint**, select the
+   `buildsight-connected-overview` branch and `render.yaml`, and review the
+   billable Starter instance and disk before deploying. If using **New → Web
+   Service** instead, choose the same branch, **Docker**, **Singapore**, and
+   **Starter**. Add a 1 GB disk at `/var/data`, set
+   `BUILDSIGHT_DB_PATH=/var/data/buildsight.sqlite`, and set the health check
+   path to `/healthz`. Leave `PORT` at Render's assigned value (default
+   `10000`). The Docker command binds to that port on `0.0.0.0`.
+2. After the first deploy, add your **public** SSH key to your Render account
+   and copy the service's SSH destination from **Connect → SSH**. Keep the
+   private key on your computer. Open an SSH shell and check that the disk is
+   writable with `test -w /var/data && echo writable`. If it fails, check
+   that the disk is mounted and work with the service owner to grant the
+   container account (UID 10001) access before uploading. The server health
+   check succeeds before the upload so the SSH session can be opened. The
+   dashboard data endpoints return 503 until the snapshot is installed.
+3. From your computer, use SSH/SCP to copy the reviewed snapshot. Replace
+   the sample file path and SSH target with your own. Compare the printed
+   SHA-256 digests, then rename the file on the same disk. The application
+   picks up the snapshot on the next request.
+
+   ```bash
+   DB=/absolute/path/to/buildsight_four_source_final.sqlite
+   TARGET=YOUR_SERVICE@ssh.YOUR_REGION.render.com
+   sha256sum "$DB"  # On macOS: shasum -a 256 "$DB"
+   scp -s "$DB" "$TARGET:/var/data/.buildsight.sqlite.upload"
+   ssh "$TARGET" 'sha256sum /var/data/.buildsight.sqlite.upload'
+   # Only run this after confirming both digests match.
+   ssh "$TARGET" 'chmod 600 /var/data/.buildsight.sqlite.upload && mv /var/data/.buildsight.sqlite.upload /var/data/buildsight.sqlite'
+   ```
+
+4. Copy the HTTPS URL shown on the service page. Open `/`, `/projects`,
+   and `/api/overview` at that URL. Confirm all four cards match the
+   local baseline, change the region, and try a contract search before
+   sharing the URL. The Blueprint leaves automatic deploys off. Use
+   **Manual Deploy** for reviewed updates to the feature branch.
+
+FastAPI serves the built React files and relative `/api/` requests on the
+same origin, including direct visits to `/projects`. The SQLite connection
+is read-only. The 288 MiB file stays off GitHub and out of the container image.
+Use the team's approved snapshot and keep the original separately. See
+[Render SSH setup](https://render.com/docs/ssh) and
+[secure file transfer](https://render.com/docs/disks#transferring-files).
+
+## Deploy to a Linux VM with Docker
+
+A VM is an alternative if the team already has access to one. Place the
+snapshot on persistent storage and make the file readable by UID 10001.
 
 From the repository root:
 

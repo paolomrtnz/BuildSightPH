@@ -40,6 +40,11 @@ def geographic_region(region_id: Annotated[int | None, Query(ge=1)] = None) -> i
 Region = Annotated[int | None, Depends(geographic_region)]
 
 
+@app.get("/healthz", include_in_schema=False)
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/api/overview")
 def summary(region_id: Region) -> dict:
     return read(overview.read_overview, region_id)

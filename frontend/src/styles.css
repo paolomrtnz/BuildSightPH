@@ -215,3 +215,12 @@ td:nth-child(3), tbody th { white-space: nowrap; }
   .page-heading { align-items: stretch; flex-direction: column; }
   .bar-row { grid-template-columns: minmax(6rem, 1fr) minmax(1.8rem, 1fr) minmax(4rem, auto); gap: .4rem; }
 }
+
+@media (max-width: 38rem) {
+  .topbar-inner { align-items: flex-start; }
+  .topbar-inner nav { flex-basis: 100%; }
+  .brand { padding-block: .75rem .25rem; }
+  .chart-actions .secondary { min-height: 2.75rem; }
+  .region-bars .bar-row { min-height: 2.75rem; }
+  .filter select { width: 100%; }
+}

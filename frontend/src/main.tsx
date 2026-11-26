@@ -105,8 +105,8 @@ function Header({ projects, query, onSearch }: {
   );
 }
 
-function Metric({ label, value, detail, children, accent }: {
-  label: string; value: string; detail: string; children: ReactNode; accent?: 'gold' | 'cyan';
+function Metric({ label, value, detail, children, accent, exactValue }: {
+  label: string; value: string; detail: string; children: ReactNode; accent?: 'gold' | 'cyan'; exactValue?: string;
 }) {
   return (
     <article className={accent ? `metric ${accent}` : 'metric'}>
@@ -117,7 +117,7 @@ function Metric({ label, value, detail, children, accent }: {
           <p>{detail}</p>
         </details>
       </div>
-      <p className="value">{value}</p>
+      <p className="value" title={exactValue}>{value}</p>
       <p className="context">{children}</p>
     </article>
   );
@@ -132,6 +132,7 @@ function Metrics({ data }: { data: Overview }) {
       </Metric>
       <Metric label="Total Reported Contract Value" accent="gold"
         value={data.total_reported_contract_value_php === null ? 'N/A' : compactPesos.format(data.total_reported_contract_value_php)}
+        exactValue={data.total_reported_contract_value_php === null ? undefined : pesos.format(data.total_reported_contract_value_php)}
         detail="Sums the selected reported contract value for each contract. Actual government expenditure is outside the dataset.">
         Selected reported contract values
       </Metric>

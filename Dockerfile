@@ -16,7 +16,9 @@ RUN --mount=type=secret,id=build_ca \
     pip install --no-cache-dir -r requirements.txt
 COPY --chown=10001:10001 backend/ ./backend/
 COPY --from=frontend --chown=10001:10001 /app/frontend/dist ./frontend/dist
-RUN useradd --uid 10001 buildsight
+RUN useradd --create-home --shell /bin/bash --uid 10001 buildsight \
+    && install -d -m 0700 -o buildsight -g buildsight /home/buildsight/.ssh \
+    && install -d -m 0750 -o buildsight -g buildsight /var/data
 USER buildsight
 EXPOSE 8000
 CMD ["sh", "-c", "exec python -m uvicorn backend.main:app --host 0.0.0.0 --port \"$PORT\""]

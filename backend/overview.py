@@ -3,7 +3,7 @@ import sqlite3
 VALID_PROGRESS = "parquet_status = 'On-Going' AND preferred_progress_pct BETWEEN 0 AND 100"
 
 REGIONS = """
-    SELECT r.region_id, r.region_name
+    SELECT r.region_id, r.region_name, m.psgc_code
     FROM dpwh_psgc_region_map AS m JOIN regions AS r USING (region_id)
 """
 
@@ -40,11 +40,11 @@ def regions(db: sqlite3.Connection) -> list[dict]:
 def regional_comparison(db: sqlite3.Connection) -> list[dict]:
     return [dict(row) for row in db.execute(f"""
         WITH geographic AS ({REGIONS})
-        SELECT g.region_id, g.region_name, COUNT(c.contract_key) AS contract_count,
+        SELECT g.region_id, g.region_name, g.psgc_code, COUNT(c.contract_key) AS contract_count,
                ROUND(SUM(c.preferred_contract_cost_php), 2) AS reported_value_php
         FROM geographic AS g
         LEFT JOIN canonical_contracts AS c USING (region_id)
-        GROUP BY g.region_id, g.region_name
+        GROUP BY g.region_id, g.region_name, g.psgc_code
         ORDER BY reported_value_php DESC, g.region_name
     """)]
 
@@ -68,13 +68,17 @@ def progress_distribution(db: sqlite3.Connection, region_id: int | None) -> list
     return [dict(label=label, contract_count=count) for label, count in zip(labels, rows)]
 
 
+def literal_pattern(value: str) -> str:
+    escaped = value.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+    return f"%{escaped}%"
+
+
 def contract_preview(db: sqlite3.Connection, region_id: int | None, search: str) -> list[dict]:
     where, params = region_scope(region_id)
     if search:
         where += " AND " if where else "WHERE "
         where += "(contract_id LIKE :search ESCAPE '!' OR contract_description LIKE :search ESCAPE '!')"
-        escaped = search.replace("!", "!!").replace("%", "!%").replace("_", "!_")
-        params["search"] = f"%{escaped}%"
+        params["search"] = literal_pattern(search)
     return [dict(row) for row in db.execute(f"""
         SELECT contract_id, contract_description,
                preferred_contract_cost_php AS reported_value_php, region_name,

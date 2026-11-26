@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import { ApiContent, RegionalChart, compactPesos, counts, formatPercent, pesos, useApi } from './shared';
+import type { Comparison, Region } from './shared';
+import { Projects, ProjectDetail } from './projects';
+import { Contractors, ContractorDetail } from './contractors';
+import { Regions } from './regions';
+import { MaterialPrices } from './prices';
+import { About } from './about';
 
 type Overview = {
   total_contracts: number;
@@ -11,8 +18,6 @@ type Overview = {
   low_progress_contracts: number;
   low_progress_ongoing_rate_pct: number | null;
 };
-type Region = { region_id: number; region_name: string };
-type Comparison = Region & { contract_count: number; reported_value_php: number | null };
 type Progress = { label: string; contract_count: number };
 type Contract = {
   contract_id: string;
@@ -23,59 +28,8 @@ type Contract = {
   reported_progress_pct: number | null;
 };
 
-const counts = new Intl.NumberFormat('en-PH');
-const pesos = new Intl.NumberFormat('en-PH', {
-  style: 'currency', currency: 'PHP', maximumFractionDigits: 2,
-});
-const compactPesos = new Intl.NumberFormat('en-PH', {
-  style: 'currency', currency: 'PHP', notation: 'compact', maximumFractionDigits: 2,
-});
-const percent = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 2 });
-const formatPercent = (value: number | null) => value === null ? 'N/A' : `${percent.format(value)}%`;
-
-type Result<T> = { data: T } | { error: true };
-
-function useApi<T>(path: string) {
-  const [attempt, setAttempt] = useState(0);
-  const key = `${attempt}:${path}`;
-  const [result, setResult] = useState<{ key: string; response: Result<T> }>();
-
-  useEffect(() => {
-    const controller = new AbortController();
-    async function load() {
-      try {
-        const response = await fetch(path, { signal: controller.signal });
-        if (!response.ok) throw new Error('Dashboard API unavailable');
-        const data: T = await response.json();
-        if (!controller.signal.aborted) setResult({ key, response: { data } });
-      } catch {
-        if (!controller.signal.aborted) setResult({ key, response: { error: true } });
-      }
-    }
-    void load();
-    return () => controller.abort();
-  }, [key, path]);
-
-  return { result: result?.key === key ? result.response : undefined, retry: () => setAttempt(n => n + 1) };
-}
-
-function ApiContent<T>({ request, children }: {
-  request: ReturnType<typeof useApi<T>>;
-  children: (data: T) => ReactNode;
-}) {
-  const { result, retry } = request;
-  if (!result) return <p className="muted" role="status">Loading dashboard data…</p>;
-  if ('error' in result) return (
-    <div className="notice" role="alert">
-      <p>Dashboard data is currently unavailable.</p>
-      <button type="button" onClick={retry}>Try again</button>
-    </div>
-  );
-  return children(result.data);
-}
-
-function Header({ projects, query, onSearch }: {
-  projects: boolean; query: string; onSearch?: (value: string) => void;
+function Header({ query, onSearch }: {
+  query: string; onSearch?: (value: string) => void;
 }) {
   function submit(event: FormEvent<HTMLFormElement>) {
     if (!onSearch) return;
@@ -91,11 +45,17 @@ function Header({ projects, query, onSearch }: {
           <span>BuildSight <strong>PH</strong></span>
         </a>
         <nav aria-label="Main navigation">
-          <a href="/" aria-current={projects ? undefined : 'page'}>Overview</a>
-          <a href="/projects" aria-current={projects ? 'page' : undefined}>Projects <small>Coming soon</small></a>
-          <a href="/#methodology">About</a>
+          {[
+            ['/', 'Overview'], ['/projects', 'Projects'], ['/regions', 'Regions'],
+            ['/contractors', 'Contractors'], ['/material-prices', 'Material Prices'], ['/about', 'About'],
+          ].map(([href, label]) => (
+            <a key={href} href={href} aria-current={(href === '/' ? location.pathname === '/' :
+              location.pathname === href || location.pathname.startsWith(href + '/')) ? 'page' : undefined}>
+              {label}
+            </a>
+          ))}
         </nav>
-        <form className="search" role="search" action="/" onSubmit={submit}>
+        <form className="search" role="search" action="/projects" onSubmit={submit}>
           <input name="q" type="search" maxLength={120} defaultValue={query}
             aria-label="Search by contract ID or project description" placeholder="Search contract ID or description" />
           <button type="submit">Search</button>
@@ -148,45 +108,6 @@ function Metrics({ data }: { data: Overview }) {
   );
 }
 
-function RegionalChart({ rows, region, select }: {
-  rows: Comparison[]; region: string; select: (id: string) => void;
-}) {
-  const [byCount, setByCount] = useState(false);
-  const value = (row: Comparison) => byCount ? row.contract_count : row.reported_value_php;
-  const sorted = [...rows].sort((a, b) => (value(b) ?? -Infinity) - (value(a) ?? -Infinity)
-    || a.region_name.localeCompare(b.region_name));
-  const max = Math.max(1, ...sorted.map(row => value(row) ?? 0));
-  return (
-    <>
-      <div className="chart-actions">
-        <div className="segmented" aria-label="Comparison metric" role="group">
-          <button type="button" aria-pressed={!byCount} onClick={() => setByCount(false)}>Reported value</button>
-          <button type="button" aria-pressed={byCount} onClick={() => setByCount(true)}>Contract count</button>
-        </div>
-        {region && <button type="button" className="secondary" onClick={() => select('')}>Reset to All Records</button>}
-      </div>
-      <ul className="bars region-bars" aria-label="Geographic region rankings">
-        {sorted.map(row => {
-          const amount = value(row);
-          const id = String(row.region_id);
-          return (
-            <li key={id}>
-              <button type="button" className="bar-row" aria-pressed={region === id}
-                onClick={() => select(id)}>
-                <span>{row.region_name}</span>
-                <span className="track" aria-hidden="true"><span style={{ width: `${(amount ?? 0) / max * 100}%` }} /></span>
-                <strong title={amount !== null && !byCount ? pesos.format(amount) : undefined}>
-                  {amount === null ? 'N/A' : byCount ? counts.format(amount) : compactPesos.format(amount)}
-                </strong>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </>
-  );
-}
-
 function ProgressChart({ rows }: { rows: Progress[] }) {
   const max = Math.max(1, ...rows.map(row => row.contract_count));
   if (!rows.some(row => row.contract_count > 0)) return <p className="muted">No eligible ongoing contracts for this selection.</p>;
@@ -215,7 +136,7 @@ function ContractTable({ rows, query }: { rows: Contract[]; query: string }) {
         </tr></thead>
         <tbody>{rows.map(row => (
           <tr key={row.contract_id}>
-            <th scope="row">{row.contract_id}</th>
+            <th scope="row"><a href={`/projects/${encodeURIComponent(row.contract_id)}`}>{row.contract_id}</a></th>
             <td>{row.contract_description || 'Unavailable'}</td>
             <td>{row.reported_value_php === null ? 'N/A' : pesos.format(row.reported_value_php)}</td>
             <td>{row.region_name || 'Unassigned'}</td>
@@ -249,7 +170,8 @@ function Methodology() {
 }
 
 function Dashboard({ initialQuery }: { initialQuery: string }) {
-  const [region, setRegion] = useState('');
+  const initialRegion = new URLSearchParams(location.search).get('region_id') ?? '';
+  const [region, setRegion] = useState(/^\d+$/.test(initialRegion) ? initialRegion : '');
   const [query, setQuery] = useState(initialQuery);
   const scope = region ? `?region_id=${region}` : '';
   const previewParams = new URLSearchParams();
@@ -260,11 +182,15 @@ function Dashboard({ initialQuery }: { initialQuery: string }) {
   const comparison = useApi<Comparison[]>('/api/overview/regional-comparison');
   const progress = useApi<Progress[]>(`/api/overview/progress-distribution${scope}`);
   const preview = useApi<Contract[]>(`/api/overview/contracts?${previewParams}`);
-  const explorer = `/projects${query ? `?q=${encodeURIComponent(query)}` : ''}`;
+  const searchParams = previewParams.toString();
+  useEffect(() => {
+    history.replaceState(null, '', `/${searchParams ? `?${searchParams}` : ''}${location.hash}`);
+  }, [searchParams]);
+  const explorer = `/projects${previewParams.size ? `?${previewParams}` : ''}`;
 
   return (
     <>
-      <Header projects={false} query={query} onSearch={setQuery} />
+      <Header query={query} onSearch={setQuery} />
       <main className="shell dashboard">
         <div className="page-heading">
           <div>
@@ -304,24 +230,18 @@ function Dashboard({ initialQuery }: { initialQuery: string }) {
   );
 }
 
-function ProjectsPlaceholder({ query }: { query: string }) {
-  const preview = query ? `/?q=${encodeURIComponent(query)}#project-preview` : '/#project-preview';
-  return (
-    <>
-      <Header projects query={query} />
-      <main className="shell">
-        <section className="panel">
-          <h1>Project Explorer</h1>
-          <p className="muted">The full Project Explorer is in development. The Overview has a searchable contract preview.</p>
-          {query && <p>Your search was “{query}”.</p>}
-          <a href={preview}>Open contract preview</a>
-        </section>
-      </main>
-    </>
-  );
-}
-
 const query = (new URLSearchParams(location.search).get('q') ?? '').trim().slice(0, 120);
+const [route, id] = location.pathname.split('/').filter(Boolean);
+let idValue = id ?? '';
+try { idValue = decodeURIComponent(idValue); } catch { /* Preserve malformed text for the API error state. */ }
+const pages: Record<string, ReactNode> = {
+  projects: id ? <ProjectDetail id={idValue} /> : <Projects />,
+  regions: <Regions />,
+  contractors: id ? <ContractorDetail id={idValue} /> : <Contractors />,
+  'material-prices': <MaterialPrices />,
+  about: <About />,
+};
 createRoot(document.getElementById('root')!).render(
-  location.pathname === '/projects' ? <ProjectsPlaceholder query={query} /> : <Dashboard initialQuery={query} />,
+  route ? <><Header query={query} /><main className="shell dashboard">{pages[route]}</main></>
+    : <Dashboard initialQuery={query} />,
 );

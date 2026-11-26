@@ -224,3 +224,45 @@ td:nth-child(3), tbody th { white-space: nowrap; }
   .region-bars .bar-row { min-height: 2.75rem; }
   .filter select { width: 100%; }
 }
+
+.filters, .facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: .85rem;
+  margin-block: 1rem;
+}
+.filters label { display: grid; align-content: start; gap: .35rem; font-size: .875rem; }
+.filters select, .filters input { width: 100%; min-width: 0; }
+.filter-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; align-self: end; }
+.facts > div { border-inline-start: 2px solid #8d6c26; padding-inline-start: .75rem; min-width: 0; }
+.facts dt { font-size: .85rem; color: #b6bac8; }
+.facts dd { margin: .25rem 0; overflow-wrap: anywhere; }
+.pagination { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; justify-content: space-between; margin-block: 1rem; }
+.pagination > div { display: flex; gap: .5rem; }
+.compact-table tbody th, .source-table tbody th { white-space: normal; }
+.compact-table td:nth-child(2), .source-table td:nth-child(2) { min-width: 0; }
+.bars a.bar-row { text-decoration: none; }
+.bars a.bar-row span:first-child { overflow-wrap: anywhere; }
+.region-map { margin-top: 1rem; height: clamp(22rem, 60vh, 38rem); background: #0b1522; border: 1px solid #384257; border-radius: .6rem; isolation: isolate; }
+.region-map .leaflet-tooltip { color: #f5f6fa; background: #151923; border-color: #535b70; }
+.region-map .leaflet-control a { color: #0a1424; }
+.price-chart { display: block; width: 100%; max-width: 62rem; margin-top: .7rem; }
+.price-chart text { font-size: .82rem; fill: #d4d7e0; }
+.price-chart line { stroke: #45495a; }
+.price-chart path { fill: none; stroke: #ffc420; stroke-width: 3; }
+.price-chart circle { fill: #22d6e7; }
+.month-slider { display: grid; gap: .35rem; max-width: 45rem; }
+.month-slider input { accent-color: #ffc420; padding: 0; }
+.definitions li, .methodology li { margin-block: .55rem; }
+.definitions p { margin-block: .2rem .8rem; }
+
+@media (min-width: 62.01rem) and (max-width: 77rem) {
+  .topbar-inner { flex-wrap: wrap; padding-block-end: .7rem; }
+  .search { flex: 1 1 18rem; }
+}
+
+.chart-period { display: none; }
+@media (max-width: 38rem) {
+  .price-chart text { display: none; }
+  .chart-period { display: block; margin-top: 0; }
+}

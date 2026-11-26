@@ -1,0 +1,102 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, sans-serif;
+  color: #f5f6fa;
+  background: #0c0e16;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+.shell {
+  width: min(100% - 2rem, 84rem);
+  margin-inline: auto;
+}
+
+.topbar {
+  border-bottom: 1px solid #272a36;
+  background: #10131e;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding-block: 1rem;
+  color: #ffc420;
+  font-size: 1.18rem;
+  font-weight: 800;
+}
+
+.brand strong { color: #f5f6fa; }
+
+.brand-mark {
+  display: inline-flex;
+  align-items: end;
+  gap: 3px;
+  padding: .42rem;
+  border-radius: .38rem;
+  background: #ffc420;
+}
+
+.brand-mark i { width: 4px; height: 10px; background: #10131e; }
+.brand-mark i:nth-child(2) { height: 14px; }
+.brand-mark i:nth-child(3) { height: 18px; }
+
+main { padding-block: 2.5rem; }
+h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.6rem); }
+.intro { color: #b6bac8; margin: .45rem 0 1.8rem; }
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.metric, .notice {
+  padding: 1.2rem;
+  border: 1px solid #303443;
+  border-radius: .7rem;
+  background: linear-gradient(145deg, #181c29, #121521);
+}
+
+.metric { display: flex; flex-direction: column; }
+.metric.gold { border-color: #94701e; }
+.metric.cyan { border-inline-start: 3px solid #22d6e7; }
+
+.metric h2 {
+  margin: 0;
+  color: #d4d7e0;
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+.value {
+  margin: auto 0 0;
+  padding-block: .75rem .4rem;
+  font-size: clamp(1.65rem, 3vw, 2.3rem);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.gold .value { color: #ffc420; }
+.cyan .value { color: #22d6e7; }
+.context { color: #b6bac8; font-size: .875rem; margin: 0; }
+
+button {
+  background: #ffc420;
+  color: #10131e;
+  border: 0;
+  border-radius: .4rem;
+  padding: .55rem .85rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 62rem) {
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 32rem) {
+  .metrics { grid-template-columns: 1fr; }
+}

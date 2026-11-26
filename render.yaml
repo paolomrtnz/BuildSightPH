@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: buildsight-ph
+    runtime: docker
+    plan: starter
+    region: singapore
+    branch: buildsight-connected-overview
+    autoDeployTrigger: "off"
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      - key: BUILDSIGHT_DB_PATH
+        value: /var/data/buildsight.sqlite
+    disk:
+      name: buildsight-snapshot
+      mountPath: /var/data
+      sizeGB: 1

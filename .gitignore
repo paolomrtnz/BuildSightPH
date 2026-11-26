@@ -1,10 +1,32 @@
+# Local environments and generated files
 .venv/
+venv/
 __pycache__/
-.env
-*.sqlite
-*.sqlite-*
+*.py[cod]
+.pytest_cache/
 node_modules/
 dist/
-*.sqlite3
-*.db
+
+# Configuration and local/private handoff files
+.env
 .env.*
+!.env.example
+data/
+private/
+secrets/
+.cloudflared/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# SQLite snapshots, journals and SQLite backups
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.sqlite.*
+*.sqlite3.*
+*.db.*

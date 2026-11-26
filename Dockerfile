@@ -16,9 +16,12 @@ RUN --mount=type=secret,id=build_ca \
     pip install --no-cache-dir -r requirements.txt
 COPY --chown=10001:10001 backend/ ./backend/
 COPY --from=frontend --chown=10001:10001 /app/frontend/dist ./frontend/dist
-RUN useradd --create-home --shell /bin/bash --uid 10001 buildsight \
+RUN useradd --user-group --create-home --shell /bin/bash --uid 10001 buildsight \
     && install -d -m 0700 -o buildsight -g buildsight /home/buildsight/.ssh \
     && install -d -m 0750 -o buildsight -g buildsight /var/data
 USER buildsight
 EXPOSE 8000
-CMD ["sh", "-c", "exec python -m uvicorn backend.main:app --host 0.0.0.0 --port \"$PORT\""]
+# Check process liveness independently of snapshot provisioning.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + (os.getenv('PORT') or '8000') + '/healthz', timeout=3).close()"]
+CMD ["sh", "-c", "exec python -m uvicorn backend.main:app --host 0.0.0.0 --port \"${PORT:-8000}\""]

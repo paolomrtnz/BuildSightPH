@@ -1,4 +1,4 @@
-# BuildSight PH 
+# BuildSight PH
 
 BuildSight PH is a Business Intelligence platform and data warehouse designed to monitor Philippine infrastructure projects. It integrates isolated public datasets from the DPWH and PSA into a unified SQLite database to track contract values, geographic distribution, and construction material price trends.
 
@@ -26,9 +26,8 @@ The ETL pipeline processes data from four public endpoints:
 ## Run the dashboard
 
 Install Python 3.10+ and Node.js 22+. Obtain the team's verified
-`buildsight_four_source_final.sqlite` snapshot from the
-[project data folder](https://drive.google.com/drive/folders/1WBPtnasvE-GjOSbZ9HzeI3wOuqEmVKsv).
-The database is supplied separately and opened read-only.
+`buildsight_four_source_final.sqlite` snapshot through the approved handoff.
+See [snapshot transfer and verification](DEPLOYMENT.md#obtain-and-verify-the-sqlite-snapshot).
 
 From the repository root on macOS or Linux:
 
@@ -45,8 +44,8 @@ python -m uvicorn backend.main:app
 On Windows, install [VS Code](https://code.visualstudio.com/download),
 [Python 3.12 with the launcher](https://www.python.org/downloads/windows/),
 and [Node.js 22 LTS](https://nodejs.org/en/download). Download the
-[feature branch ZIP](https://github.com/paolomrtnz/BuildSightPH/archive/refs/heads/buildsight-connected-overview.zip)
-or use `git pull --ff-only` if already on that branch. Open the extracted
+[main branch ZIP](https://github.com/paolomrtnz/BuildSightPH/archive/refs/heads/main.zip)
+or run `git switch main` and `git pull --ff-only origin main` if you already have a checkout. Open the extracted
 project root in VS Code and place the SQLite snapshot at
 `data\buildsight_four_source_final.sqlite`. Run in the integrated PowerShell terminal:
 
@@ -109,102 +108,25 @@ Run the snapshot integration checks after setting `BUILDSIGHT_DB_PATH`:
 On macOS/Linux, use `python -m unittest discover -s tests -v` with the
 virtual environment active.
 
-## Professor deployment handoff
+## Build, test, and deploy
 
-Give the professor the chosen Git revision, the reviewed SQLite snapshot
-separately, and its SHA-256 checksum. Run the existing Docker image with the
-snapshot on persistent storage, `BUILDSIGHT_DB_PATH` pointing to the file,
-and the host's `PORT` set if required. FastAPI serves all six React routes
-and the API on one origin. Verify the HTTPS site, direct page links, and
-`/api/overview` before attaching the team's domain through the professor's
-hosting account. The domain name alone does not identify the hosting service.
-The Render and VM instructions below are options for the professor.
+FastAPI serves the built React and TypeScript application, map boundaries, and
+the API from one origin. SQLite opens the supplied snapshot read-only.
+`BUILDSIGHT_DB_PATH` selects the database file. For Docker, `PORT` controls the
+HTTP listener and defaults to 8000. Native Uvicorn uses the port specified by
+`--port`.
 
-## Deploy on Render
+GitHub Actions builds the frontend and runs production HTTP smoke tests with a
+temporary synthetic SQLite fixture. To run the same checks locally, build the
+frontend and run `python -m unittest discover -s tests -p test_http.py -v`.
+Set `BUILDSIGHT_DB_PATH` to the approved snapshot and run the complete test
+suite to verify the validated figures against the real database.
 
-The repository's `render.yaml` describes one Docker web service in Singapore,
-with a Starter instance and a 1 GB persistent disk mounted at `/var/data`.
-At the published rates checked on November 27, 2026, this is about **US$7.25 per
-month** before tax or usage charges ($7 compute plus $0.25 disk). Confirm prices
-in the dashboard before creating the service. Render's Free web service has
-ephemeral storage, no persistent disk or SSH, and spins down after 15 minutes
-idle. It is unsuitable for this persistent SQLite setup. A disk-backed
-service also uses a single instance. See
-[Render pricing](https://render.com/pricing) and
-[Persistent Disks](https://render.com/docs/disks).
-
-1. Sign in at [Render](https://dashboard.render.com/) and authorize access to
-   `paolomrtnz/BuildSightPH`. Choose **New → Blueprint**, select the
-   `buildsight-connected-overview` branch and `render.yaml`, and review the
-   billable Starter instance and disk before deploying. If using **New → Web
-   Service** instead, choose the same branch, **Docker**, **Singapore**, and
-   **Starter**. Add a 1 GB disk at `/var/data`, set
-   `BUILDSIGHT_DB_PATH=/var/data/buildsight.sqlite`, and set the health check
-   path to `/healthz`. Leave `PORT` at Render's assigned value (default
-   `10000`). The Docker command binds to that port on `0.0.0.0`.
-2. After the first deploy, add your **public** SSH key to your Render account
-   and copy the service's SSH destination from **Connect → SSH**. Keep the
-   private key on your computer. Open an SSH shell and check that the disk is
-   writable with `test -w /var/data && echo writable`. If it fails, check
-   that the disk is mounted and work with the service owner to grant the
-   container account (UID 10001) access before uploading. The server health
-   check succeeds before the upload so the SSH session can be opened. The
-   dashboard data endpoints return 503 until the snapshot is installed.
-3. From your computer, use SSH/SCP to copy the reviewed snapshot. Replace
-   the sample file path and SSH target with your own. Compare the printed
-   SHA-256 digests, then rename the file on the same disk. The application
-   picks up the snapshot on the next request.
-
-   ```bash
-   DB=/absolute/path/to/buildsight_four_source_final.sqlite
-   TARGET=YOUR_SERVICE@ssh.YOUR_REGION.render.com
-   sha256sum "$DB"  # On macOS: shasum -a 256 "$DB"
-   scp -s "$DB" "$TARGET:/var/data/.buildsight.sqlite.upload"
-   ssh "$TARGET" 'sha256sum /var/data/.buildsight.sqlite.upload'
-   # Only run this after confirming both digests match.
-   ssh "$TARGET" 'chmod 600 /var/data/.buildsight.sqlite.upload && mv /var/data/.buildsight.sqlite.upload /var/data/buildsight.sqlite'
-   ```
-
-4. Copy the HTTPS URL shown on the service page. Open `/`, `/projects`,
-   and `/api/overview` at that URL. Confirm all four cards match the
-   local baseline, change the region, and try a contract search before
-   sharing the URL. The Blueprint leaves automatic deploys off. Use
-   **Manual Deploy** for reviewed updates to the feature branch.
-
-FastAPI serves the built React files and relative `/api/` requests on the
-same origin, including direct visits to regional, contractor, and project pages. The SQLite connection
-is read-only. The 288 MiB file stays off GitHub and out of the container image.
-Use the team's approved snapshot and keep the original separately. See
-[Render SSH setup](https://render.com/docs/ssh) and
-[secure file transfer](https://render.com/docs/disks#transferring-files).
-
-## Deploy to a Linux VM with Docker
-
-A VM is an alternative if the team already has access to one. Place the
-snapshot on persistent storage and make the file readable by UID 10001.
-
-From the repository root:
-
-```bash
-docker build -t buildsight-ph .
-docker run --rm --name buildsight-ph -p 127.0.0.1:8000:8000 \
-  --mount "type=bind,source=/absolute/path/to/buildsight_four_source_final.sqlite,target=/data/buildsight.sqlite,readonly" \
-  -e BUILDSIGHT_DB_PATH=/data/buildsight.sqlite buildsight-ph
-```
-
-If your build network uses a private certificate authority, pass its trusted
-CA bundle using `docker build --secret id=build_ca,src=/path/to/ca-bundle.pem -t buildsight-ph .`.
-
-Point the host's HTTPS reverse proxy or managed ingress at the container's
-`PORT` (default 8000). FastAPI serves both the built React app and relative
-`/api/` URLs on that same origin, so cross-origin access is unnecessary.
-It serves all six routes directly, including on refresh. Ensure a new
-host can reach `/api/regions` and test both pages over public HTTPS before
-sharing the link. Review the snapshot for publication with the team and mount
-only the verified copy. The Git and Docker ignore rules exclude SQLite files.
-
-For non-container Linux deployment, use the local build steps and start
-`python -m uvicorn backend.main:app --host 0.0.0.0 --port "${PORT:-8000}"`.
+`main` is the approved deployment branch. See [DEPLOYMENT.md](DEPLOYMENT.md)
+for verified snapshot transfer, Docker, native Linux, optional Render, and
+rollbacks. The [deployment checklist](DEPLOYMENT_CHECKLIST.md) is for the
+professor or hosting administrator. [.env.example](.env.example) contains
+example values for the container.
 
 ## Repository structure
 

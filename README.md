@@ -25,9 +25,11 @@ The ETL pipeline processes data from four public endpoints:
 
 ## Run the dashboard
 
-Install Python 3.10+ and Node.js 22+. Obtain the team's verified
-`buildsight_four_source_final.sqlite` snapshot through the approved handoff.
-See [snapshot transfer and verification](DEPLOYMENT.md#obtain-and-verify-the-sqlite-snapshot).
+Install Python 3.10+ and Node.js 22+. Download the
+[approved SQLite snapshot (`buildsight_four_source_final.sqlite`)](https://drive.google.com/file/d/1wUXoaTf_Pm_NVd-xlNzSgChEOQyEAfea/view).
+Keep the file outside Git. Before using it, compute its SHA-256 and compare
+it with the expected digest supplied by the capstone team through a trusted
+channel. See [snapshot transfer and verification](DEPLOYMENT.md#obtain-and-verify-the-sqlite-snapshot).
 
 From the repository root on macOS or Linux:
 

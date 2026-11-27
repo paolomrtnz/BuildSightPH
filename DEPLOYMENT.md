@@ -19,13 +19,15 @@ policy belong to the professor or domain administrator.
 
 ## Obtain and verify the SQLite snapshot
 
-1. Request the approved `buildsight_four_source_final.sqlite` release file and
-   its SHA-256 digest from the capstone team. Use a restricted Drive share,
-   approved institutional storage, or another authenticated handoff. Ask the
-   team to confirm the digest through a trusted channel. Use only the standalone
-   snapshot. The team should validate any replacement snapshot before handoff.
+1. Download the
+   [approved SQLite snapshot (`buildsight_four_source_final.sqlite`)](https://drive.google.com/file/d/1wUXoaTf_Pm_NVd-xlNzSgChEOQyEAfea/view).
+   If Drive asks for access, request it from the capstone team. Ask the team
+   for the expected SHA-256 digest for this exact release through a trusted
+   channel. Keep the standalone snapshot outside Git and the container image.
 2. Compute the digest on the computer that received the file and compare all 64
-   hex characters with the team's digest.
+   hexadecimal characters with the team's digest. Letter case does not matter.
+   If the expected digest is unavailable or the values differ, stop and
+   confirm the approved release with the team before using the file.
 
    **Windows PowerShell**
 
